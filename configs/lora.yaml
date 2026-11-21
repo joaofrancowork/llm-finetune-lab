@@ -1,0 +1,14 @@
+# LoRA SFT recipe for Qwen2.5-0.5B-Instruct on banking77 (one epoch, ~9.000 examples).
+model: Qwen/Qwen2.5-0.5B-Instruct
+rank: 16
+alpha: 32
+dropout: 0.05
+learning_rate: 0.0002
+epochs: 1
+batch_size: 16
+gradient_accumulation: 1
+warmup_ratio: 0.05
+max_length: 96
+seed: 42
+eval_batch_size: 32
+max_new_tokens: 16
