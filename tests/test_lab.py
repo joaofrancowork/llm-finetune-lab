@@ -114,7 +114,8 @@ def test_config_from_yaml(tmp_path: Path) -> None:
 
 def test_baseline_learns_the_toy_intents(parquet_files: dict[str, Path]) -> None:
     splits = load(parquet_files, val_frac=0.2)
-    result = baseline.run(splits.train, splits.test)
+    result, predicted = baseline.run(splits.train, splits.test)
+    assert len(predicted) == len(splits.test)
     assert result.accuracy >= 0.9 and result.invalid_rate == 0.0
 
 
@@ -134,3 +135,31 @@ def test_cli_baseline_and_report(
     assert cli.main(["report"]) == 0
     assert "TF-IDF" in capsys.readouterr().out
     assert (tmp_path / "docs" / "results.md").exists()
+
+
+def test_compare_two_classifiers() -> None:
+    from finetune_lab.analysis import compare, to_markdown
+
+    gold = ["x", "x", "y", "y", "z"]
+    texts = [f"t{i}" for i in range(5)]
+    a = pd.DataFrame({"text": texts, "intent": gold, "predicted": ["x", "y", "y", "y", "x"]})
+    b = pd.DataFrame({"text": texts, "intent": gold, "predicted": ["x", "x", "y", "x", "x"]})
+    c = compare(a, b, "lora", "tfidf")
+    assert (c.accuracy_a, c.accuracy_b) == (0.6, 0.6)
+    assert c.agreement == 0.6 and c.accuracy_when_agree == pytest.approx(2 / 3)
+    assert c.both_wrong == 0.2 and c.oracle == 0.8
+    md = to_markdown(c, rows=2)
+    assert "Oracle (either right) | 80.0%" in md and "| Intent | F1 lora | F1 tfidf |" in md
+    with pytest.raises(ValueError):
+        compare(a, b.iloc[:3], "a", "b")
+
+
+def test_cli_compare(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    frame = pd.DataFrame({"text": ["a", "b"], "intent": ["x", "y"], "predicted": ["x", "x"]})
+    frame.to_csv(tmp_path / "a.csv", index=False)
+    frame.assign(predicted=["x", "y"]).to_csv(tmp_path / "b.csv", index=False)
+    assert cli.main(["compare", "--a", "a.csv", "--b", "b.csv"]) == 0
+    assert "Oracle" in capsys.readouterr().out and (tmp_path / "docs/error-analysis.md").exists()

@@ -52,8 +52,22 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("baseline", "zero-shot", "train", "finetuned", "report"):
         sub.add_parser(name)
+    compare_parser = sub.add_parser("compare", help="Error analysis between two prediction files")
+    compare_parser.add_argument("--a", type=Path, default=RUNS / "lora-predictions.csv")
+    compare_parser.add_argument("--b", type=Path, default=RUNS / "baseline-predictions.csv")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+    if args.command == "compare":
+        from finetune_lab.analysis import compare, to_markdown
+
+        names = [p.stem.removesuffix("-predictions") for p in (args.a, args.b)]
+        result = compare(pd.read_csv(args.a), pd.read_csv(args.b), *names)
+        text = to_markdown(result)
+        print(text)
+        Path("docs").mkdir(exist_ok=True)
+        Path("docs/error-analysis.md").write_text(text + "\n")
+        return 0
 
     if args.command == "report":
         results = [Scores(**json.loads(p.read_text())) for p in sorted(RUNS.glob("*.json"))]
@@ -70,7 +84,8 @@ def main(argv: list[str] | None = None) -> int:
     test = splits.test.head(args.limit) if args.limit else splits.test
 
     if args.command == "baseline":
-        _save(baseline.run(splits.train, test), test, "baseline")
+        scores, predicted = baseline.run(splits.train, test)
+        _save(scores, test.assign(predicted=predicted), "baseline")
         return 0
     if args.command == "train":  # pragma: no cover - needs model weights
         from finetune_lab.train import train

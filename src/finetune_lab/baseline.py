@@ -27,9 +27,10 @@ def build() -> Pipeline:
     return Pipeline([("features", features), ("clf", LogisticRegression(C=10, max_iter=2000))])
 
 
-def run(train: pd.DataFrame, test: pd.DataFrame) -> Scores:
+def run(train: pd.DataFrame, test: pd.DataFrame) -> tuple[Scores, list[str]]:
     model = build().fit(train["text"], train["intent"])
     started = time.perf_counter()
     predicted = list(model.predict(test["text"]))
     latency = (time.perf_counter() - started) * 1000 / max(1, len(test))
-    return score("TF-IDF + logistic regression", list(test["intent"]), predicted, latency)
+    scores = score("TF-IDF + logistic regression", list(test["intent"]), predicted, latency)
+    return scores, predicted
