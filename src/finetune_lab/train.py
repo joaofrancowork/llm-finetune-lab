@@ -72,8 +72,13 @@ def train(
     seed_everything(cfg.seed)
     dev = device()
     tokenizer = AutoTokenizer.from_pretrained(cfg.model)
-    model: Any = AutoModelForCausalLM.from_pretrained(cfg.model, dtype=torch.float32)
+    # bf16 weights + gradient checkpointing keep a 0.5B model well inside 24 GB of
+    # unified memory; LoRA weights and optimizer state stay small either way.
+    model: Any = AutoModelForCausalLM.from_pretrained(cfg.model, dtype=getattr(torch, cfg.dtype))
     model = model.to(dev)
+    if cfg.gradient_checkpointing:
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
     model = get_peft_model(
         model,
         PeftLoraConfig(

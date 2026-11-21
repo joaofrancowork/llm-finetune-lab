@@ -16,8 +16,10 @@ class LoraConfig(BaseModel):
     ]  # fmt: skip
     learning_rate: float = 2e-4
     epochs: float = 1.0
-    batch_size: int = 16
-    gradient_accumulation: int = 1
+    batch_size: int = 8
+    gradient_accumulation: int = 2
+    dtype: str = "bfloat16"
+    gradient_checkpointing: bool = True
     warmup_ratio: float = 0.05
     max_length: int = 96
     seed: int = 42
