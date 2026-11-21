@@ -1,7 +1,7 @@
 """Prompts for the two settings being compared.
 
 * Zero-shot: the base model must pick from all 77 labels listed in the prompt
-  (about 600 tokens of instructions per request).
+  (430 prompt tokens per request with Qwen's chat template).
 * Fine-tuned: the adapter has learned the label set, so the prompt is one line.
   Same output format in both: the label alone, in snake_case.
 """
