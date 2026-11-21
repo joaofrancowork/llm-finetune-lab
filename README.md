@@ -32,6 +32,13 @@ thousands of labelled examples, the classical model is the better production cho
 models also make the same kind of mistakes, between intents that are hard to tell apart
 (`card_arrival` vs `card_delivery_estimate`, `verify_my_identity` vs `why_verify_identity`).
 
+**They are wrong in different places.** `ft-lab compare` puts the two ~91% models side by
+side ([docs/error-analysis.md](docs/error-analysis.md)): they give the same answer on 89.2% of
+messages and are then right **97.3%** of the time; only 4.9% of messages fool both, so an oracle
+that picks the right model would reach 95.1%. Each wins on different intents (TF-IDF on
+`topping_up_by_card`, LoRA on `top_up_failed`). In production, disagreement between two cheap
+models is a useful confidence signal: auto-route when they agree, ask a human when they don't.
+
 **When the LLM route is worth it.** Few or no labels (where the classical model cannot learn),
 labels that change often, or an assistant that has to *also* talk to the customer. Then the same
 adapter recipe applies, and this repo measures it against the baseline before deciding.
